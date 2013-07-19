@@ -1,0 +1,23 @@
+{
+  "name": "eventtree-util",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jasmine-node tests/"
+  },
+  "dependencies":{
+    "requirejs":"latest",
+    "amdefine":"latest",
+    "constraints":"0.0.4"
+  },
+  "devDependencies": {
+    "jasmine-node": "latest",
+    "jshint": "latest",
+    "organic":"latest",
+    "organic-plasma-multimatch":"latest"
+  },
+  "repository": "",
+  "author": "Valeri Bogdanov",
+  "license": "BSD"
+}
