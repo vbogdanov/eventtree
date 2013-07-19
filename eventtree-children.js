@@ -62,17 +62,19 @@ module.exports = function create(eventree, getChildren) {
       var cnd = conditions[i];
       if (isOnAny(cnd[0])) {
         var children = getChildren();
+        var stops = [];
         for(var j = 0; j < children.length; j++) {
           child = children[j];
           var cnds = arrcopy(conditions);
           cnds[i] = [child, cnd[1]];
-          handleOr(cnds, handlerFn);
+          var stop = handleOr(cnds, handlerFn);
+          stops.push(stop);
         }
-        return;
+        return fnInvokeAll(stops);
       }
     }
     //invoke with the arguments in the proper groups
-    eventree.on(conditions, handlerFn);
+    return eventree.on(conditions, handlerFn);
   }
 
   function collapseAndIndex(andStrechIndexes, handlerFn) {
@@ -109,10 +111,10 @@ module.exports = function create(eventree, getChildren) {
         });
       });
 
-      handleOr(newcond, collapseAndIndex(andStrechIndexes, handlerFn));
+      return handleOr(newcond, collapseAndIndex(andStrechIndexes, handlerFn));
     },
     emit: function (child, event, data, callback) {
-      return multicall("emit", child, event, data, callback);
+      multicall("emit", child, event, data, callback);
     },
     state: function (child, event, data, callback) {
       return multicall("state", child, event, data, callback);
