@@ -233,6 +233,6 @@ describe("eventtree-children", function () {
 
     expect(map.X.length).toBe(4);
     expect(map.Y.length).toBe(4);
-    console.log(map.X, map.Y);
+    console.log("A combination resulting from a couple of ORs over 2 children",map.X, map.Y);
   });
 });
