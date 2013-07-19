@@ -11,7 +11,7 @@
 
 var createChildrenEventtree = require("../eventtree-children");
 var tc = require("constraints")();
-
+var NOP_FN = function () {};
 
 function children(arr) {
   return function () {
@@ -24,17 +24,16 @@ function createFakeET(config) {
     on: function (conditions, handlerFn) {
       expect(conditions).toEqual(config.on.conditions);
       handlerFn({data:null, callback: null});
-      return function () {};
+      return NOP_FN;
     },
     emit: function (child, event, data, callback) {
       expect(child).toEqual(config.emit.child);
       expect(event).toEqual(config.emit.event);
-      return function () {};
     },
     state: function (child, event, data, callback) {
       expect(child).toEqual(config.emit.child);
       expect(event).toEqual(config.emit.event);
-      return function () {};
+      return NOP_FN;
     }
   };
 }
@@ -44,6 +43,7 @@ function create(config) {
 }
 
 function countingFn(handler) {
+  handler = handler || NOP_FN;
   var fn = function () {
     fn.count ++;
     handler.apply(this, arguments);
@@ -95,7 +95,7 @@ describe("eventtree-children", function () {
   });
 
   it("transmits to all children when 'children' used in child attribute in state", function () {
-    var EXPECTED_FN = countingFn(function () { });
+    var EXPECTED_FN = countingFn();
     var index = 0;
     var cs = children(["ala", "bala"]);
 
@@ -118,12 +118,13 @@ describe("eventtree-children", function () {
     expect(EXPECTED_FN.count).toBe(2);
   });
 
-  it("transmits registers on ALL children when 'children' is used", function (next) {
+  it("registers on ALL children when 'children' is used", function (next) {
     var cs = children(["ala", "bala"]);
     var underlying = {
       on: function (conditions, handlerFn) {
         expect(conditions).toEqual([["ala","X"], ["bala","X"]]);
         handlerFn({data:5},{data:2});
+        return NOP_FN;
       },
       emit: function (child, event, data, callback) {
       },
@@ -132,7 +133,7 @@ describe("eventtree-children", function () {
     };
 
     var eventtree = createChildrenEventtree(underlying, cs);
-    var stop = eventtree.on([["children", "X"]], function (event){
+    eventtree.on([["children", "X"]], function (event){
       expect(event.ala.data).toBe(5);
       expect(event.bala.data).toBe(2);
       next();
@@ -147,6 +148,7 @@ describe("eventtree-children", function () {
       on: function (conditions, handlerFn) {
         expect(conditions).toEqual(CND[index ++]);
         handlerFn({data:2});
+        return NOP_FN;
       },
       emit: function (child, event, data, callback) {
       },
@@ -162,6 +164,75 @@ describe("eventtree-children", function () {
       }
     });
 
-    var stop = eventtree.on([["anychild", "X"]], handler);
+    eventtree.on([["anychild", "X"]], handler);
+  });
+
+  it("removes registration when the stop function is invoked for AND", function (next) {
+    var cs = children(["ala", "bala"]);
+    var underlying = {
+      on: function (conditions, handlerFn) {
+        expect(conditions).toEqual([["ala","X"], ["bala","X"]]);
+        handlerFn({data:5},{data:2});
+        return next;
+      },
+      emit: function (child, event, data, callback) {
+      },
+      state: function (child, event, data, callback) {
+      }
+    };
+
+    var eventtree = createChildrenEventtree(underlying, cs);
+    var stop = eventtree.on([["children", "X"]], function (event){
+      expect(event.ala.data).toBe(5);
+      expect(event.bala.data).toBe(2);
+    });
+    stop(); //next
+  });
+
+  it("registers alternative listeners when 'anychild' is used", function () {
+    var index = 0;
+    var CND = [[["ala","X"]], [["bala","X"]]];
+    var stopFn = countingFn();
+
+    var cs = children(["ala", "bala"]);
+    var underlying = {
+      on: function (conditions, handlerFn) {
+        expect(conditions).toEqual(CND[index ++]);
+        return stopFn;
+      },
+      emit: function (child, event, data, callback) {
+      },
+      state: function (child, event, data, callback) {
+      }
+    };
+
+    var eventtree = createChildrenEventtree(underlying, cs);
+    var stop = eventtree.on([["anychild", "X"]], NOP_FN);
+    stop();
+    expect(stopFn.count).toBe(2);
+  });
+
+  it("registers alternative listeners when 'anychild' is used multiple times for any combination", function () {
+    var index = 0;
+    var cs = children(["ala", "bala"]);
+    var map = {X:[], Y:[]};
+    var underlying = {
+      on: function (conditions, handlerFn) {
+        map.X.push(conditions[0][0]);
+        map.Y.push(conditions[1][0]);
+        return NOP_FN;
+      },
+      emit: function (child, event, data, callback) {
+      },
+      state: function (child, event, data, callback) {
+      }
+    };
+
+    var eventtree = createChildrenEventtree(underlying, cs);
+    eventtree.on([["anychild", "X"], ["anychild", "Y"]], NOP_FN);
+
+    expect(map.X.length).toBe(4);
+    expect(map.Y.length).toBe(4);
+    console.log(map.X, map.Y);
   });
 });
