@@ -51,16 +51,12 @@ module.exports = function create(eventree, getChildren) {
     return fnInvokeAll(endfns);
   }
 
-  function handleOrCondition(cnd, index, conditions, handlerFn) {
-    var children = getChildren();
-    var stops = [];
-    for(var j = 0; j < children.length; j++) {
-      var child = children[j];
+  function registerForEveryChild(cnd, index, conditions, handlerFn) {
+    var stops = getChildren().map(function (child) {
       var cnds = arrcopy(conditions);
       cnds[index] = [child, cnd[1]];
-      var stop = handleOr(cnds, handlerFn);
-      stops.push(stop);
-    }
+      return handleOr(cnds, handlerFn);
+    });
     return fnInvokeAll(stops);
   }
 
@@ -68,7 +64,7 @@ module.exports = function create(eventree, getChildren) {
     for (var i = 0; i < conditions.length; i ++) {
       var cnd = conditions[i];
       if (isOnAny(cnd[0])) {
-        return handleOrCondition(cnd, i, conditions, handlerFn);
+        return registerForEveryChild(cnd, i, conditions, handlerFn);
       }
     }
     //invoke with the arguments in the proper groups
