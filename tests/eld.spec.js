@@ -87,7 +87,7 @@ describe("eld (Event Listener Definition)", function () {
     expect(eventtree.on).toHaveBeenCalledWith([["", "moon"]], FN_MATCH);
     //get the handleFn argument of eventtree.on
     var etHandlerFn = eventtree.on.mostRecentCall.args[1];
-    etHandlerFn({ data: "moon moon" });
-    expect(eventtree.emit).toHaveBeenCalledWith("", "test", { ":moon":{ data: "moon moon" } }, FN_MATCH);
+    etHandlerFn({ data: "moon moon", callback: NOP_FN });
+    expect(eventtree.emit).toHaveBeenCalledWith("", "test","moon moon", FN_MATCH);
   });
 });

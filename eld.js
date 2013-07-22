@@ -48,32 +48,10 @@ function getResponseFn (eventtree, response, conditions) {
       };
     });
 
-  return function (/* data[] */) {
-    var data = buildData(conditions, arguments);
-    var callback = callAll(arguments);
-
+  return function (event) {
     actions.forEach(function (action) {
-      eventtree.emit(action.child, action.event,data ,callback);
-    });
-  };
-}
-
-function buildData(conditions, args) {
-  //use reduce instead of forEach since the task is to generate 1 object.
-  return conditions.reduce(function (data, eventpair, index) {
-    var key = eventpair.join(CHILD_EVENT_SEPARATOR);
-    data[key] = args[index];
-    return data;
-  }, Object.create(null));
-}
-
-function callAll(args) {
-  return function () {
-    var cbargs = arguments;
-    Array.prototype.forEach.call(args, function (data) {
-      var fn = data && data.callback;
-      if (tc.check("function", cb))
-        fn.apply(null, cbargs);
+      //use the event and callback from the first condition only
+      eventtree.emit(action.child, action.event,event.data ,event.callback);
     });
   };
 }
