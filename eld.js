@@ -12,6 +12,7 @@
    ":selectionChanged": "head.showSelected, body.showSelected"
  });
  */
+ "use strict";
 
 module.exports = function eld(eventtree, definition) {
   for (var k in definition) {

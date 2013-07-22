@@ -1,13 +1,10 @@
-/* jshint globalstrict: true */
-/* global require: false */
 /* global describe: false */
 /* global it: false */
 /* global expect: false */
-/* global process: false */
-/* global console: false */
 /* global beforeEach: false */
 /* global afterEach: false */
 /* global spyOn: false */
+/* global jasmine: false */
 /* jshint maxstatements: 30 */
 
 "use strict";

@@ -1,3 +1,6 @@
+"use strict";
+
+// Example for creating "eventbus"
 // var Plasma = require("organic").Plasma;
 // var multimatch = require("organic-plasma-multimatch");
 // var eventbus = (new Plasma()).use(multimatch);

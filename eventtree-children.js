@@ -1,3 +1,4 @@
+"use strict";
 
 var tc = require("constraints")();
 
@@ -11,20 +12,24 @@ function copyAndReplace0(arr, val) {
   return a;
 }
 
+function arrcopy(arr) {
+  return arr.slice(0);
+}
+
+function isEmitAll(child) {
+  return child === "children";
+}
+
+function isOnAny(child) {
+  return child === "anychild";
+}
+
+function isOnAll(child) {
+  return child === "children";
+}
+
 module.exports = function create(eventree, getChildren) {
   tc.args("eventree", "function", arguments);
-
-  function isEmitAll(child) {
-    return child === "children";
-  }
-
-  function isOnAny(child) {
-    return child === "anychild";
-  }
-
-  function isOnAll(child) {
-    return child === "children";
-  }
 
   function fnInvokeAll(fnarr) {
     return function () {
@@ -34,43 +39,36 @@ module.exports = function create(eventree, getChildren) {
     };
   }
 
-  function multicall(methodName, child, event, data, callback) {
-    tc.assert("string", child);
-    tc.assert("string", event);
-    tc.assert("fn?", callback);
+/*jshint maxparams:5 */
+  function multicall(methodName, child, args) {
+    tc.assert("string", "string", null, "fn?", args);
 
     var method = eventree[methodName];
     var children = isEmitAll(child)? getChildren(): [child];
     var endfns = children.map(function (currentChild) {
-      return method.call(eventree, currentChild, event, data, callback);
+      return method.call(eventree, currentChild, args[1], args[2], args[3]);
     });
     return fnInvokeAll(endfns);
   }
 
-  function fillForChildren(conditions, event) {
-    children.forEach(function (c) {
-      conditions.push([c, event]);
-    });
-  }
-
-  function arrcopy(arr) {
-    return arr.slice(0);
+  function handleOrCondition(cnd, index, conditions, handlerFn) {
+    var children = getChildren();
+    var stops = [];
+    for(var j = 0; j < children.length; j++) {
+      var child = children[j];
+      var cnds = arrcopy(conditions);
+      cnds[index] = [child, cnd[1]];
+      var stop = handleOr(cnds, handlerFn);
+      stops.push(stop);
+    }
+    return fnInvokeAll(stops);
   }
 
   function handleOr(conditions, handlerFn) {
     for (var i = 0; i < conditions.length; i ++) {
       var cnd = conditions[i];
       if (isOnAny(cnd[0])) {
-        var children = getChildren();
-        var stops = [];
-        for(var j = 0; j < children.length; j++) {
-          child = children[j];
-          var cnds = arrcopy(conditions);
-          cnds[i] = [child, cnd[1]];
-          var stop = handleOr(cnds, handlerFn);
-          stops.push(stop);
-        }
-        return fnInvokeAll(stops);
+        return handleOrCondition(cnd, i, conditions, handlerFn);
       }
     }
     //invoke with the arguments in the proper groups
@@ -114,10 +112,10 @@ module.exports = function create(eventree, getChildren) {
       return handleOr(newcond, collapseAndIndex(andStrechIndexes, handlerFn));
     },
     emit: function (child, event, data, callback) {
-      multicall("emit", child, event, data, callback);
+      multicall("emit", child, arguments);
     },
     state: function (child, event, data, callback) {
-      return multicall("state", child, event, data, callback);
+      return multicall("state", child, arguments);
     }
   };
 };
