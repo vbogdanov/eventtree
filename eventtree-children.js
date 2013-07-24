@@ -1,10 +1,12 @@
 "use strict";
 
+var async = require("async");
 var tc = require("constraints")();
 
 tc.define("conditions", [".notEmpty()", [".size(2)", "string", "string"]]);
 tc.define("fn?", tc.noneOr("function"));
 tc.define("eventree", require("./eventtree").typedef);
+tc.define("childrenNames", ["", "string"]);
 
 function copyAndReplace0(arr, val) {
   var a = Array.prototype.slice.call(arr, 1);
@@ -28,8 +30,30 @@ function isOnAll(child) {
   return child === "children";
 }
 
-module.exports = function create(eventree, getChildren) {
+function map2 (list, fn, noerrCallback) {
+  tc.args([".notEmpty()", "string"], "function", "function", arguments);
+
+  var result = [];
+  async.map(list, function (val, cb) {
+    var noerrcb = function (data) {
+      cb(null, data);
+    };
+    var r = fn(val, noerrcb);
+    result.push(r);
+  }, function (err, val) {
+    noerrCallback(val);
+  });
+  return result;
+}
+
+module.exports = function create(eventree, _getChildrenNames) {
   tc.args("eventree", "function", arguments);
+  var getChildrenNames = function () {
+    var res = _getChildrenNames();
+    tc.assert("childrenNames", res);
+    return res;
+  };
+
 
   function fnInvokeAll(fnarr) {
     return function () {
@@ -44,15 +68,17 @@ module.exports = function create(eventree, getChildren) {
     tc.assert("string", "string", null, "fn?", args);
 
     var method = eventree[methodName];
-    var children = isEmitAll(child)? getChildren(): [child];
-    var endfns = children.map(function (currentChild) {
-      return method.call(eventree, currentChild, args[1], args[2], args[3]);
-    });
+    var children = isEmitAll(child)? getChildrenNames(): [child];
+    var callback = args[3] || function () {};
+    var endfns = map2(children, function (currentChild, cb) {
+      return method.call(eventree, currentChild, args[1], args[2], cb);
+    }, callback);
+
     return fnInvokeAll(endfns);
   }
 
   function registerForEveryChild(cnd, index, conditions, handlerFn) {
-    var stops = getChildren().map(function (child) {
+    var stops = getChildrenNames().map(function (child) {
       var cnds = arrcopy(conditions);
       cnds[index] = [child, cnd[1]];
       return handleOr(cnds, handlerFn);
@@ -72,7 +98,7 @@ module.exports = function create(eventree, getChildren) {
   }
 
   function collapseAndIndex(andStrechIndexes, handlerFn) {
-    var cs = getChildren();
+    var cs = getChildrenNames();
     return function () {
       var args = Array.prototype.slice.call(arguments, 0);
       andStrechIndexes.forEach(function (index) {
@@ -100,7 +126,7 @@ module.exports = function create(eventree, getChildren) {
           return;
         }
         andStrechIndexes.push(index);
-        getChildren().forEach(function (child) {
+        getChildrenNames().forEach(function (child) {
           newcond.push([child, cnd[1]]);
         });
       });
